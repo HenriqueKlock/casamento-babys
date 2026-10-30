@@ -80,7 +80,9 @@ if (dir) {
   const walk = (d) => readdirSync(d).forEach((f) => { const p = join(d, f); statSync(p).isDirectory() ? walk(p) : files.push(p); });
   walk(dir);
   const texto = files.filter((f) => /\.(js|html|json|webmanifest)$/.test(f)).map((f) => readFileSync(f, 'utf8')).join('\n');
-  /sb_secret_|service_role/.test(texto) ? bad('build contém chave secreta') : ok('build sem chave secreta');
+  // formato de chave de verdade (a biblioteca do Supabase cita o prefixo sb_secret_ no próprio código)
+  /sb_secret_[A-Za-z0-9_-]{16,}|c2VydmljZV9yb2xl|NlcnZpY2Vfcm9sZ|zZXJ2aWNlX3JvbG|sk-ant-[A-Za-z0-9_-]{10,}|AIza[0-9A-Za-z_-]{30}/.test(texto)
+    ? bad('build contém chave secreta') : ok('build sem chave secreta');
   /babys-[0-9a-z]{6}/.test(texto) ? bad('build contém o código do evento') : ok('build sem o código do evento (só o QR o carrega)');
 }
 
