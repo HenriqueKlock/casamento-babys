@@ -16,6 +16,7 @@ O convidado lê o QR da mesa, digita o nome e recebe um desafio sorteado. Ele cu
 - **Supabase (projeto `casamento-babys`, São Paulo):**
   - Convidado entra com **login anônimo**; noivos e moderadores entram por **link no e-mail** e estão em `app_admins` (por e-mail, preenchida no banco ou pelo painel).
   - Tabelas: `eventos`, `convidados`, `desafios`, `sorteios`, `fotos`, todas com RLS. O convidado só vê os desafios que sorteou (a lista é surpresa), os próprios sorteios e as fotos não ocultas do evento.
+  - Foto que entrou no mural fica: o convidado não apaga nem a própria (nem a linha, nem o arquivo). Só noivos e moderadores ocultam pelo painel, e só eles podem apagar.
   - Funções (`security definer`), o único caminho de escrita do convidado:
     - `entrar(código, nome)`: confere o código do QR e se o evento está aberto.
     - `sortear()`: um desafio aberto por vez. Escolhe, entre os ligados que a pessoa ainda não teve, o que menos gente está fazendo ou fez, com desempate aleatório.

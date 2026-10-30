@@ -61,14 +61,18 @@ begin
   f := public.cumprir(s_final, v_ev || '/' || a || '/' || s_final || '.jpg', v_ev || '/' || a || '/' || s_final || '-mini.jpg');
   f2 := public.cumprir(s_final, v_ev || '/' || a || '/' || s_final || '.jpg', v_ev || '/' || a || '/' || s_final || '-mini.jpg');
   if f is null or f <> f2 then raise exception 'FALHOU: reenvio da fila criou outra foto'; end if;
+  delete from public.fotos where id = f;
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FALHOU: dono apagou a própria foto do mural'; end if;
   r := public.estado();
   if (r ->> 'feitos')::int <> 1 or r -> 'sorteio' <> 'null'::jsonb then raise exception 'FALHOU: estado depois de cumprir %', r; end if;
 
   -- ===== convidado B =====
   perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated', 'is_anonymous', true)::text, true);
   perform public.entrar(v_codigo, 'Bia');
-  select count(*) into n from public.fotos;
-  if n <> 1 then raise exception 'FALHOU: B vê % fotos no mural', n; end if;
+  -- só a foto criada aqui: o evento pode já ter fotos de testes reais
+  select count(*) into n from public.fotos where id = f;
+  if n <> 1 then raise exception 'FALHOU: B não vê a foto de A no mural'; end if;
   update public.fotos set oculta = true where id = f;
   get diagnostics n = row_count;
   if n <> 0 then raise exception 'FALHOU: B ocultou foto de A'; end if;
@@ -91,11 +95,11 @@ begin
   select count(*) into n from public.desafios;
   if n < 19 then raise exception 'FALHOU: admin vê só % desafios', n; end if;
   perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated', 'is_anonymous', true)::text, true);
-  select count(*) into n from public.fotos;
+  select count(*) into n from public.fotos where id = f;
   if n <> 0 then raise exception 'FALHOU: foto oculta continua no mural de B'; end if;
   begin update public.fotos set oculta = false where id = f; exception when others then null; end;
   perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated', 'is_anonymous', true)::text, true);
-  select count(*) into n from public.fotos;
+  select count(*) into n from public.fotos where id = f;
   if n <> 1 then raise exception 'FALHOU: A não vê a própria foto oculta'; end if;
 
   -- convidado anônimo com e-mail no token não vira admin

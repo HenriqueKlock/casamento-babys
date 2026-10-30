@@ -1,4 +1,4 @@
-import { apagarFoto, meuId, mural, ouvirFotos, urlPublica, type Foto } from '../api';
+import { meuId, mural, ouvirFotos, urlPublica, type Foto } from '../api';
 import { mensagemErro } from '../regras';
 import { onShow } from '../router';
 import { $, esc, ocupado, toast } from '../ui';
@@ -8,7 +8,6 @@ let filtro: 'todas' | 'minhas' = 'todas';
 let fim = false;
 let uid: string | null = null;
 let ouvindo = false;
-let aberta: Foto | null = null;
 
 export function initMural() {
   const grade = $('m-grade');
@@ -28,34 +27,16 @@ export function initMural() {
     const el = (ev.target as HTMLElement).closest<HTMLElement>('[data-id]');
     const f = el && fotos.find((x) => x.id === el.dataset.id);
     if (!f) return;
-    aberta = f;
     const img = $<HTMLImageElement>('f-img');
     img.crossOrigin = 'anonymous';
     img.src = urlPublica(f.caminho);
     img.alt = 'Foto de ' + f.nome + ': ' + f.desafio_texto;
     $('f-legenda').textContent = f.desafio_texto;
     $('f-nome').textContent = f.nome;
-    $('f-apagar').hidden = f.convidado_id !== uid;
     dialog.showModal();
   });
   $('f-fechar').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (ev) => { if (ev.target === dialog) dialog.close(); });
-  $('f-apagar').addEventListener('click', () => {
-    const f = aberta;
-    if (!f || !confirm('Apagar esta foto do mural? O desafio continua contando como cumprido.')) return;
-    ocupado($<HTMLButtonElement>('f-apagar'), async () => {
-      try {
-        await apagarFoto(f);
-        fotos = fotos.filter((x) => x.id !== f.id);
-        render();
-        dialog.close();
-        toast('Foto apagada');
-      } catch (e) {
-        toast(mensagemErro(e), 'erro');
-      }
-    });
-  });
-
   onShow('mural', async () => {
     uid = await meuId();
     if (!ouvindo && uid) {

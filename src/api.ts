@@ -79,10 +79,6 @@ export async function mural(opts: { antes?: string; soMinhas?: boolean; limite?:
   }
   return ok(await q) as Foto[];
 }
-export async function apagarFoto(f: Foto) {
-  ok(await supabase.from('fotos').delete().eq('id', f.id));
-  await supabase.storage.from('fotos').remove([f.caminho, f.miniatura]);
-}
 /** Fotos novas e removidas, ao vivo (o RLS decide o que chega a cada um). */
 export function ouvirFotos(cb: (tipo: 'INSERT' | 'UPDATE' | 'DELETE', f: Partial<Foto>) => void): RealtimeChannel {
   return supabase
