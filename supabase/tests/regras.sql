@@ -4,9 +4,11 @@ do $$
 declare
   v_ev uuid; v_codigo text;
   a uuid := gen_random_uuid(); b uuid := gen_random_uuid();
-  r jsonb; s1 uuid; s_final uuid; d_final uuid; f uuid; f2 uuid; n int; t text;
+  r jsonb; s1 uuid; s_final uuid; d_final uuid; f uuid; f2 uuid; n int; v_admin text;
 begin
   select id, codigo into v_ev, v_codigo from public.eventos order by criado_em limit 1;
+  -- lido antes de trocar de papel: para o convidado a tabela de admins é invisível
+  select email into v_admin from public.app_admins limit 1;
   update public.eventos set aberto = true, max_trocas = 2, max_desafios = 3 where id = v_ev;
   insert into auth.users (id, aud, role, is_anonymous) values (a, 'authenticated', 'authenticated', true), (b, 'authenticated', 'authenticated', true);
 
@@ -82,7 +84,7 @@ begin
 
   -- ===== admin oculta =====
   perform set_config('request.jwt.claims', json_build_object('sub', gen_random_uuid(), 'role', 'authenticated', 'is_anonymous', false,
-    'email', (select email from public.app_admins limit 1))::text, true);
+    'email', v_admin)::text, true);
   update public.fotos set oculta = true where id = f;
   get diagnostics n = row_count;
   if n <> 1 then raise exception 'FALHOU: admin não ocultou'; end if;
@@ -98,7 +100,7 @@ begin
 
   -- convidado anônimo com e-mail no token não vira admin
   perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated', 'is_anonymous', true,
-    'email', (select email from public.app_admins limit 1))::text, true);
+    'email', v_admin)::text, true);
   if public.sou_admin() then raise exception 'FALHOU: anônimo virou admin'; end if;
 
   -- ===== limites e evento fechado =====
