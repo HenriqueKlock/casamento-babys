@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+.env.*
+# fotos e listas dos convidados nunca entram no repositório
+fotos/
+*.zip
