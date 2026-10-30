@@ -81,6 +81,8 @@ export function mensagemErro(e: unknown): string {
   const code = typeof e === 'object' && e && 'code' in e ? String((e as { code: unknown }).code) : '';
   for (const k of Object.keys(MENSAGENS)) if (msg.includes(k) || code === k) return MENSAGENS[k];
   if (/Anonymous sign-ins are disabled/i.test(msg)) return MENSAGENS.anonymous_provider_disabled;
+  if (/Invalid login credentials/i.test(msg) || code === 'invalid_credentials') return 'E-mail ou senha errados.';
+  if (/Email not confirmed/i.test(msg)) return 'Conta sem confirmação: marque "Auto Confirm User" ao criar no Supabase.';
   if (/rate limit|too many/i.test(msg)) return 'Muita gente entrando ao mesmo tempo. Tente de novo em um minuto.';
   if (/fetch|network|offline|Failed to fetch|Load failed/i.test(msg)) return 'Sem internet agora. Tente de novo em instantes.';
   return 'Algo deu errado. Tente de novo.';

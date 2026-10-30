@@ -69,6 +69,7 @@ test('mensagens de erro em português e erro de rede separado de regra', () => {
   assert.equal(mensagemErro(new Error('codigo_invalido')), 'Esse QR não é do casamento. Leia o QR da placa da mesa.');
   assert.match(mensagemErro(new TypeError('Failed to fetch')), /Sem internet/);
   assert.match(mensagemErro({ message: 'Anonymous sign-ins are disabled' }), /liberado/);
+  assert.equal(mensagemErro({ message: 'Invalid login credentials', code: 'invalid_credentials' }), 'E-mail ou senha errados.');
   assert.equal(mensagemErro('qualquer coisa'), 'Algo deu errado. Tente de novo.');
   assert.equal(erroDeRede(new TypeError('Failed to fetch')), true);
   assert.equal(erroDeRede(new TypeError('Load failed')), true);

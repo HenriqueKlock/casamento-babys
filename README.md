@@ -14,7 +14,7 @@ O convidado lê o QR da mesa, digita o nome e recebe um desafio sorteado. Ele cu
   - Fila offline: a foto fica no IndexedDB (Dexie) até o banco confirmar. Ela sobe sozinha ao voltar a internet, ao abrir o app e a cada 20 s (`src/fila.ts`).
   - O service worker guarda as fotos do mural (o caminho de cada uma nunca muda). Atualização automática, sem aviso ao convidado.
 - **Supabase (projeto `casamento-babys`, São Paulo):**
-  - Convidado entra com **login anônimo**; noivos e moderadores entram por **link no e-mail** e estão em `app_admins` (por e-mail, preenchida no banco ou pelo painel).
+  - Convidado entra com **login anônimo**. Noivos e moderadores entram com **e-mail e senha**, numa conta criada no painel do Supabase (nada depende de envio de e-mail), e precisam estar em `app_admins` (por e-mail, preenchida no banco ou pelo painel). `sou_admin()` só aceita conta com e-mail confirmado.
   - Tabelas: `eventos`, `convidados`, `desafios`, `sorteios`, `fotos`, todas com RLS. O convidado só vê os desafios que sorteou (a lista é surpresa), os próprios sorteios e as fotos não ocultas do evento.
   - Foto que entrou no mural fica: o convidado não apaga nem a própria (nem a linha, nem o arquivo). Só noivos e moderadores ocultam pelo painel, e só eles podem apagar.
   - Funções (`security definer`), o único caminho de escrita do convidado:
@@ -46,11 +46,12 @@ npm run check      # tipos
 
 ## Configuração que só o dono do projeto faz
 
-1. **Supabase › Authentication:**
+1. **Supabase › Authentication › Users › Add user › Create new user:** e-mail e senha de cada noivo ou moderador, com **Auto Confirm User** marcado. Depois, inclua o e-mail em "Noivos e moderadores" no painel (o seu já está).
+2. **Supabase › Authentication:**
    - *Sign In / Providers*: ligar **Allow anonymous sign-ins**.
    - *Rate Limits*: **anonymous sign-ins** em 500 por hora. No Wi-Fi do salão, todos saem pelo mesmo IP.
    - *URL Configuration*: Site URL e Redirect URLs = `https://henriqueklock.github.io/casamento-babys/`.
-2. **GitHub › Settings › Pages:** Source = GitHub Actions.
+3. **GitHub › Settings › Pages:** Source = GitHub Actions.
 
 ## Depois da festa
 

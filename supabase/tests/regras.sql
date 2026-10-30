@@ -3,7 +3,7 @@
 do $$
 declare
   v_ev uuid; v_codigo text;
-  a uuid := gen_random_uuid(); b uuid := gen_random_uuid();
+  a uuid := gen_random_uuid(); b uuid := gen_random_uuid(); adm uuid := gen_random_uuid(); falso uuid := gen_random_uuid();
   r jsonb; s1 uuid; s_final uuid; d_final uuid; f uuid; f2 uuid; n int; v_admin text;
 begin
   select id, codigo into v_ev, v_codigo from public.eventos order by criado_em limit 1;
@@ -11,6 +11,9 @@ begin
   select email into v_admin from public.app_admins limit 1;
   update public.eventos set aberto = true, max_trocas = 2, max_desafios = 3 where id = v_ev;
   insert into auth.users (id, aud, role, is_anonymous) values (a, 'authenticated', 'authenticated', true), (b, 'authenticated', 'authenticated', true);
+  -- admin de verdade (e-mail confirmado) e um impostor com o mesmo e-mail sem confirmação
+  insert into auth.users (id, aud, role, is_anonymous, email, email_confirmed_at) values (adm, 'authenticated', 'authenticated', false, v_admin, now());
+  insert into auth.users (id, aud, role, is_anonymous, email, is_sso_user) values (falso, 'authenticated', 'authenticated', false, upper(v_admin), true);
 
   -- ===== convidado A =====
   perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated', 'is_anonymous', true)::text, true);
@@ -87,7 +90,10 @@ begin
   if (r -> 'sorteio' ->> 'desafio_id')::uuid = d_final then raise exception 'FALHOU: sorteio não equilibrou (repetiu o já cumprido)'; end if;
 
   -- ===== admin oculta =====
-  perform set_config('request.jwt.claims', json_build_object('sub', gen_random_uuid(), 'role', 'authenticated', 'is_anonymous', false,
+  perform set_config('request.jwt.claims', json_build_object('sub', falso, 'role', 'authenticated', 'is_anonymous', false,
+    'email', v_admin)::text, true);
+  if public.sou_admin() then raise exception 'FALHOU: conta sem e-mail confirmado virou admin'; end if;
+  perform set_config('request.jwt.claims', json_build_object('sub', adm, 'role', 'authenticated', 'is_anonymous', false,
     'email', v_admin)::text, true);
   update public.fotos set oculta = true where id = f;
   get diagnostics n = row_count;

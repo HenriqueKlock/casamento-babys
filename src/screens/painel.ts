@@ -1,5 +1,5 @@
 import {
-  admins, contarConvidados, desafios, evento, incluirAdmin, incluirDesafios, ligarDesafio, loginEmail, ocultar,
+  admins, contarConvidados, desafios, evento, incluirAdmin, incluirDesafios, ligarDesafio, loginSenha, ocultar,
   ouvirFotos, removerAdmin, sair, salvarEvento, sessao, souAdmin, todasFotos, urlPublica, type Desafio, type Evento, type Foto,
 } from '../api';
 import { APP_URL } from '../config';
@@ -57,25 +57,29 @@ async function renderLogin() {
     '<h1 class="titulo-md">Painel dos noivos</h1>' +
     (outro
       ? '<div class="secao"><p class="caixa-texto">O e-mail <b>' + esc(s!.user.email) + '</b> não está entre os noivos e moderadores.</p><button id="p-sair" class="btn btn-2" type="button">Sair e entrar com outro e-mail</button></div>'
-      : '<form id="p-form" class="secao" novalidate><label for="p-email" class="rotulo" style="margin-top:0">Seu e-mail</label>' +
-        '<input id="p-email" class="campo" type="email" inputmode="email" autocomplete="email" placeholder="voce@email.com" required>' +
-        '<button class="btn" type="submit">Receber link de acesso</button>' +
-        '<p class="nota" style="margin-top:4px">Abra o e-mail <b>neste aparelho</b> e toque no link. Só noivos e moderadores cadastrados veem o painel.' +
+      : '<form id="p-form" class="secao" novalidate><label for="p-email" class="rotulo" style="margin-top:0">E-mail</label>' +
+        '<input id="p-email" class="campo" type="email" inputmode="email" autocomplete="username" placeholder="voce@email.com" required>' +
+        '<label for="p-senha" class="rotulo" style="margin-top:8px">Senha</label>' +
+        '<input id="p-senha" class="campo" type="password" autocomplete="current-password" required>' +
+        '<button class="btn" type="submit">Entrar</button>' +
+        '<p class="nota" style="margin-top:4px">Só noivos e moderadores cadastrados veem o painel.' +
         (s?.user.is_anonymous ? ' Neste celular você também está como convidado; ao entrar aqui, ele deixa de ser o seu acesso de convidado.' : '') + '</p></form>');
   $('p-sair')?.addEventListener('click', async () => { await sair(); renderLogin(); });
   const form = document.getElementById('p-form') as HTMLFormElement | null;
   form?.addEventListener('submit', (e) => {
     e.preventDefault();
     const email = $<HTMLInputElement>('p-email').value.trim().toLowerCase();
+    const senha = $<HTMLInputElement>('p-senha').value;
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return toast('Digite um e-mail válido.', 'erro');
+    if (!senha) return toast('Digite a senha.', 'erro');
     ocupado(form.querySelector('button'), async () => {
       try {
-        await loginEmail(email);
-        form.innerHTML = '<p class="caixa-texto"><b>Confira seu e-mail.</b> Enviamos um link para ' + esc(email) + '. Pode levar um minuto e às vezes cai no spam.</p>';
+        await loginSenha(email, senha);
+        go('painel', true);
       } catch (err) {
         toast(mensagemErro(err), 'erro');
       }
-    }, 'Enviando…');
+    }, 'Entrando…');
   });
 }
 

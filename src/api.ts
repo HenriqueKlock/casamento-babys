@@ -1,5 +1,5 @@
 import { createClient, type RealtimeChannel } from '@supabase/supabase-js';
-import { APP_URL, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config';
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: { flowType: 'pkce', persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
@@ -90,8 +90,9 @@ export function ouvirFotos(cb: (tipo: 'INSERT' | 'UPDATE' | 'DELETE', f: Partial
 }
 
 /* ---------- noivos e moderadores ---------- */
-export async function loginEmail(email: string) {
-  const { error } = await supabase.auth.signInWithOtp({ email, options: { shouldCreateUser: true, emailRedirectTo: APP_URL + '?depois=painel' } });
+/** Noivos e moderadores: conta criada no painel do Supabase (Authentication › Users), sem depender de envio de e-mail. */
+export async function loginSenha(email: string, senha: string) {
+  const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
   if (error) throw error;
 }
 export async function sair() {
