@@ -73,6 +73,13 @@ const MENSAGENS: Record<string, string> = {
   caminho_invalido: 'Não deu para registrar a foto. Tente de novo.',
   arquivo_faltando: 'A foto não terminou de subir. Tente de novo.',
   anonymous_provider_disabled: 'O app ainda não foi liberado para convidados.',
+  fase_esquenta: 'Os desafios começam no dia do casamento!',
+  esquenta_encerrado: 'O esquenta acabou: agora é hora dos desafios!',
+  recado_vazio: 'Escreva o recado antes de enviar.',
+  recado_longo: 'O recado pode ter até 280 letras.',
+  tema_invalido: 'Esse tema não está mais disponível. Escolha outro.',
+  limite_fotos_esquenta: 'Você já mandou todas as suas fotos do esquenta.',
+  limite_recados: 'Você já mandou todos os seus recados.',
 };
 
 /** Erro do banco ou da rede em uma frase para o convidado. */
@@ -92,4 +99,31 @@ export function mensagemErro(e: unknown): string {
 export function erroDeRede(e: unknown): boolean {
   const msg = e instanceof Error ? e.message : typeof e === 'object' && e && 'message' in e ? String((e as { message: unknown }).message) : String(e ?? '');
   return /fetch|network|offline|Load failed|timeout|ECONN|502|503|504/i.test(msg);
+}
+
+/** Dias até a data do evento (AAAA-MM-DD), pelo calendário do aparelho. */
+export function diasAte(data: string, hoje: Date): number {
+  const [a, m, d] = data.split('-').map(Number);
+  return Math.round((Date.UTC(a, m - 1, d) - Date.UTC(hoje.getFullYear(), hoje.getMonth(), hoje.getDate())) / 864e5);
+}
+
+export function textoContagem(dias: number): string {
+  if (dias > 1) return 'Faltam ' + dias + ' dias';
+  if (dias === 1) return 'Falta 1 dia';
+  return dias === 0 ? 'É hoje!' : '';
+}
+
+/** O que o convidado ainda pode mandar no esquenta. */
+export function textoLimitesEsquenta(fotos: number, recados: number): string {
+  const f = fotos === 1 ? '1 foto' : fotos + ' fotos';
+  const r = recados === 1 ? '1 recado' : recados + ' recados';
+  if (fotos <= 0 && recados <= 0) return 'Você já mandou todas as suas fotos e recados. Obrigado!';
+  if (fotos <= 0) return 'Fotos esgotadas. Você ainda pode mandar ' + r + '.';
+  if (recados <= 0) return 'Recados esgotados. Você ainda pode mandar ' + f + '.';
+  return 'Você ainda pode mandar ' + f + ' e ' + r + '.';
+}
+
+/** Título de um post no mural: o desafio, o tema do esquenta, ou "Momento"/"Recado". */
+export function tituloPost(p: { desafio_texto?: string | null; tema?: string | null; caminho?: string | null }): string {
+  return p.desafio_texto || p.tema || (p.caminho ? 'Momento' : 'Recado');
 }

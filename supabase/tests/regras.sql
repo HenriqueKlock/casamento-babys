@@ -5,11 +5,14 @@ declare
   v_ev uuid; v_codigo text;
   a uuid := gen_random_uuid(); b uuid := gen_random_uuid(); adm uuid := gen_random_uuid(); falso uuid := gen_random_uuid();
   r jsonb; s1 uuid; s_final uuid; d_final uuid; f uuid; f2 uuid; n int; v_admin text;
+  p1 uuid := gen_random_uuid(); p2 uuid := gen_random_uuid(); t text;
 begin
   select id, codigo into v_ev, v_codigo from public.eventos order by criado_em limit 1;
   -- lido antes de trocar de papel: para o convidado a tabela de admins é invisível
   select email into v_admin from public.app_admins limit 1;
-  update public.eventos set aberto = true, max_trocas = 2, max_desafios = 3 where id = v_ev;
+  -- desafios primeiro: fase festa
+  update public.eventos set aberto = true, max_trocas = 2, max_desafios = 3, fase = 'festa', festa_a_partir = null,
+    max_fotos_esquenta = 3, max_recados = 3 where id = v_ev;
   insert into auth.users (id, aud, role, is_anonymous) values (a, 'authenticated', 'authenticated', true), (b, 'authenticated', 'authenticated', true);
   -- admin de verdade (e-mail confirmado) e um impostor com o mesmo e-mail sem confirmação
   insert into auth.users (id, aud, role, is_anonymous, email, email_confirmed_at) values (adm, 'authenticated', 'authenticated', false, v_admin, now());
@@ -112,6 +115,61 @@ begin
   perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated', 'is_anonymous', true,
     'email', v_admin)::text, true);
   if public.sou_admin() then raise exception 'FALHOU: anônimo virou admin'; end if;
+
+  -- ===== esquenta =====
+  execute 'reset role';
+  update public.eventos set fase = 'esquenta', festa_a_partir = null, max_fotos_esquenta = 1, max_recados = 2 where id = v_ev;
+  select temas[1] into t from public.eventos where id = v_ev;
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated', 'is_anonymous', true)::text, true);
+  begin perform public.sortear(); raise exception 'FALHOU: sorteou no esquenta';
+  exception when others then if sqlerrm <> 'fase_esquenta' then raise; end if; end;
+  if (public.estado() ->> 'fase') <> 'esquenta' then raise exception 'FALHOU: estado sem a fase esquenta'; end if;
+  begin perform public.compartilhar(gen_random_uuid(), null, null, null, '   '); raise exception 'FALHOU: recado vazio entrou';
+  exception when others then if sqlerrm <> 'recado_vazio' then raise; end if; end;
+  begin perform public.compartilhar(gen_random_uuid(), null, null, 'tema inventado', 'oi'); raise exception 'FALHOU: tema inventado entrou';
+  exception when others then if sqlerrm <> 'tema_invalido' then raise; end if; end;
+  perform public.compartilhar(gen_random_uuid(), null, null, t, 'Primeiro recado');
+  perform public.compartilhar(gen_random_uuid(), null, null, null, 'Segundo recado');
+  begin perform public.compartilhar(gen_random_uuid(), null, null, null, 'Terceiro'); raise exception 'FALHOU: passou do limite de recados';
+  exception when others then if sqlerrm <> 'limite_recados' then raise; end if; end;
+  begin perform public.compartilhar(p1, v_ev || '/' || a || '/' || p1 || '.jpg', v_ev || '/' || a || '/' || p1 || '-mini.jpg', t, null);
+    raise exception 'FALHOU: esquenta aceitou pasta de outra pessoa';
+  exception when others then if sqlerrm <> 'caminho_invalido' then raise; end if; end;
+  begin perform public.compartilhar(p1, v_ev || '/' || b || '/' || p1 || '.jpg', v_ev || '/' || b || '/' || p1 || '-mini.jpg', t, null);
+    raise exception 'FALHOU: esquenta aceitou foto sem arquivo';
+  exception when others then if sqlerrm <> 'arquivo_faltando' then raise; end if; end;
+  execute 'reset role';
+  insert into storage.objects (bucket_id, name) values
+    ('fotos', v_ev || '/' || b || '/' || p1 || '.jpg'), ('fotos', v_ev || '/' || b || '/' || p1 || '-mini.jpg');
+  execute 'set local role authenticated';
+  if public.compartilhar(p1, v_ev || '/' || b || '/' || p1 || '.jpg', v_ev || '/' || b || '/' || p1 || '-mini.jpg', t, 'Com legenda') <> p1
+     or public.compartilhar(p1, v_ev || '/' || b || '/' || p1 || '.jpg', v_ev || '/' || b || '/' || p1 || '-mini.jpg', t, 'Com legenda') <> p1 then
+    raise exception 'FALHOU: foto do esquenta não entrou ou duplicou no reenvio';
+  end if;
+  begin perform public.compartilhar(p2, v_ev || '/' || b || '/' || p2 || '.jpg', v_ev || '/' || b || '/' || p2 || '-mini.jpg', null, null);
+    raise exception 'FALHOU: passou do limite de fotos do esquenta';
+  exception when others then if sqlerrm <> 'limite_fotos_esquenta' then raise; end if; end;
+  r := public.estado();
+  if (r ->> 'fotos_esquenta')::int <> 1 or (r ->> 'recados')::int <> 2 then raise exception 'FALHOU: contagem do esquenta %', r; end if;
+  -- A vê o esquenta de B no mural e não apaga
+  perform set_config('request.jwt.claims', json_build_object('sub', a, 'role', 'authenticated', 'is_anonymous', true)::text, true);
+  select count(*) into n from public.fotos where convidado_id = b and tipo = 'esquenta';
+  if n <> 3 then raise exception 'FALHOU: A vê % posts do esquenta de B', n; end if;
+  delete from public.fotos where convidado_id = b;
+  get diagnostics n = row_count;
+  if n <> 0 then raise exception 'FALHOU: A apagou post de B'; end if;
+  -- virada automática pelo horário
+  execute 'reset role';
+  update public.eventos set festa_a_partir = now() - interval '1 minute' where id = v_ev;
+  execute 'set local role anon';
+  if public.fase_do_evento(v_codigo) <> 'festa' then raise exception 'FALHOU: virada automática não aconteceu'; end if;
+  if public.fase_do_evento('codigo-inventado') is not null then raise exception 'FALHOU: fase de código inventado'; end if;
+  execute 'reset role';
+  execute 'set local role authenticated';
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated', 'is_anonymous', true)::text, true);
+  begin perform public.compartilhar(gen_random_uuid(), null, null, null, 'Depois da virada'); raise exception 'FALHOU: esquenta depois da virada';
+  exception when others then if sqlerrm <> 'esquenta_encerrado' then raise; end if; end;
 
   -- ===== limites e evento fechado =====
   execute 'reset role';

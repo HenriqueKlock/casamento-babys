@@ -103,8 +103,8 @@ textarea.campo { height: auto; padding: 12px; font-size: 15px; line-height: 1.5;
 .polaroide figcaption { margin-top: 10px; font-size: 13px; line-height: 1.35; color: var(--texto); text-align: left; }
 #v-cumprido .discreto { margin-bottom: 4px; }
 
-.filtros { display: flex; gap: 8px; margin: 16px 0; }
-.pilula { min-height: 40px; padding: 0 18px; border-radius: 20px; border: 1px solid var(--borda); background: transparent; color: var(--tinta); font-size: 14px; font-weight: 600; cursor: pointer; }
+.filtros { display: flex; gap: 6px; margin: 16px 0; flex-wrap: wrap; }
+.pilula { min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--borda); background: transparent; color: var(--tinta); font-size: 14px; font-weight: 600; cursor: pointer; }
 .pilula[aria-pressed="true"] { background: var(--tinta); color: var(--linho); border-color: var(--tinta); }
 .grade { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 12px; align-items: start; }
 .item { all: unset; cursor: pointer; display: block; }
@@ -189,3 +189,27 @@ textarea.campo { height: auto; padding: 12px; font-size: 15px; line-height: 1.5;
 .telao .entrar img { width: 10vw; height: 10vw; border-radius: 12px; background: #fff; border: 1px solid var(--linha); }
 .telao .vazio-t { grid-column: 1 / -1; align-self: center; text-align: center; font-family: var(--serif); font-size: 3vw; color: var(--texto); }
 .telao .cheia { position: absolute; top: 12px; right: 12px; min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--borda); background: var(--linho); color: var(--tinta); font-size: 13px; cursor: pointer; }
+
+/* ---------- esquenta ---------- */
+.discreto-inline { font-weight: 400; color: var(--discreto); }
+.temas { display: flex; flex-wrap: wrap; gap: 8px; }
+.tema { min-height: 40px; padding: 8px 14px; border-radius: 20px; border: 1px solid var(--borda); background: var(--linho); color: var(--tinta); font-size: 14px; line-height: 1.25; text-align: left; cursor: pointer; }
+.tema[aria-pressed="true"] { background: var(--salvia); border-color: var(--salvia); color: #fff; }
+.contador { margin: 6px 0 0; font-size: 12px; color: var(--discreto); text-align: right; }
+#v-esquenta .rotulo { margin: 22px 0 10px; }
+#v-esquenta .acoes { padding-top: 6px; }
+.item .recado-card, .mod .recado-mini {
+  display: flex; align-items: center; justify-content: center; text-align: center; background: var(--salvia-fundo); color: var(--salvia-escura);
+  font-family: var(--serif); font-style: italic; overflow: hidden;
+}
+.item .recado-card { aspect-ratio: 4 / 5; border-radius: 14px; padding: 14px; font-size: 16px; line-height: 1.35; }
+.item .recado-card span { display: -webkit-box; -webkit-line-clamp: 7; -webkit-box-orient: vertical; overflow: hidden; }
+.mod .recado-mini { width: 56px; height: 56px; border-radius: 10px; font-size: 24px; }
+.etiqueta { display: inline-block; margin-bottom: 4px; padding: 2px 8px; border-radius: 10px; background: var(--rose); color: var(--alerta); font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; }
+.recado-grande { margin: 0; padding: 28px 20px; border-radius: 14px; background: var(--salvia-fundo); color: var(--salvia-escura); font-family: var(--serif); font-style: italic; font-size: 22px; line-height: 1.35; text-align: center; white-space: pre-line; }
+.radios { display: flex; gap: 8px; flex-wrap: wrap; }
+.radios label { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; border-radius: 22px; border: 1px solid var(--borda); font-size: 15px; cursor: pointer; }
+.radios input { accent-color: var(--salvia); width: 18px; height: 18px; }
+.fase-agora { font-size: 14px; color: var(--discreto); margin: 0; }
+.telao .recado-t { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 3vw; background: var(--salvia-fundo); color: var(--salvia-escura); font-family: var(--serif); font-style: italic; font-size: 3vw; line-height: 1.3; text-align: center; border-radius: 4px; }
+.telao .t-legenda { margin: 2.5vh 0 0; font-family: var(--serif); font-style: italic; font-size: 2vw; line-height: 1.3; color: var(--texto); }

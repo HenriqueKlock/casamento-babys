@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  caminhos, codigoDaRota, erroDeRede, lerLista, medidas, mensagemErro, nomeArquivo, rotuloTrocas, textoFaltam, textoProgresso,
+  caminhos, codigoDaRota, diasAte, erroDeRede, lerLista, medidas, mensagemErro, nomeArquivo, rotuloTrocas, textoContagem, textoFaltam,
+  textoLimitesEsquenta, textoProgresso, tituloPost,
 } from '../src/regras.ts';
 
 test('medidas: reduz pelo lado maior e nunca amplia', () => {
@@ -74,4 +75,23 @@ test('mensagens de erro em português e erro de rede separado de regra', () => {
   assert.equal(erroDeRede(new TypeError('Failed to fetch')), true);
   assert.equal(erroDeRede(new TypeError('Load failed')), true);
   assert.equal(erroDeRede({ message: 'evento_fechado' }), false);
+});
+
+test('esquenta: contagem regressiva, limites e título do post', () => {
+  assert.equal(diasAte('2026-11-21', new Date(2026, 9, 30, 23, 50)), 22);
+  assert.equal(diasAte('2026-11-21', new Date(2026, 10, 21, 0, 5)), 0);
+  assert.equal(textoContagem(22), 'Faltam 22 dias');
+  assert.equal(textoContagem(1), 'Falta 1 dia');
+  assert.equal(textoContagem(0), 'É hoje!');
+  assert.equal(textoContagem(-1), '');
+  assert.equal(textoLimitesEsquenta(3, 3), 'Você ainda pode mandar 3 fotos e 3 recados.');
+  assert.equal(textoLimitesEsquenta(1, 0), 'Recados esgotados. Você ainda pode mandar 1 foto.');
+  assert.equal(textoLimitesEsquenta(0, 2), 'Fotos esgotadas. Você ainda pode mandar 2 recados.');
+  assert.match(textoLimitesEsquenta(0, 0), /todas as suas/);
+  assert.equal(tituloPost({ desafio_texto: 'Tire uma foto com o DJ.' }), 'Tire uma foto com o DJ.');
+  assert.equal(tituloPost({ tema: 'O look em construção', caminho: 'x.jpg' }), 'O look em construção');
+  assert.equal(tituloPost({ caminho: 'x.jpg' }), 'Momento');
+  assert.equal(tituloPost({ caminho: null }), 'Recado');
+  assert.equal(mensagemErro({ message: 'limite_recados' }), 'Você já mandou todos os seus recados.');
+  assert.equal(mensagemErro({ message: 'fase_esquenta' }), 'Os desafios começam no dia do casamento!');
 });

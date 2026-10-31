@@ -1,9 +1,9 @@
 import {
-  admins, contarConvidados, desafios, evento, incluirAdmin, incluirDesafios, ligarDesafio, loginSenha, ocultar,
+  admins, contarConvidados, desafios, evento, faseAtual, incluirAdmin, incluirDesafios, ligarDesafio, loginSenha, ocultar,
   ouvirFotos, removerAdmin, sair, salvarEvento, sessao, souAdmin, todasFotos, urlPublica, type Desafio, type Evento, type Foto,
 } from '../api';
 import { APP_URL } from '../config';
-import { lerLista, mensagemErro, nomeArquivo } from '../regras';
+import { lerLista, mensagemErro, nomeArquivo, tituloPost } from '../regras';
 import { go, onShow, rotaAtual } from '../router';
 import { $, esc, ICONES, ocupado, toast } from '../ui';
 
@@ -96,6 +96,19 @@ async function carregar() {
   box.innerHTML =
     '<div><p class="eyebrow">Painel · noivos e moderadores</p><h1 class="titulo-md">' + esc(ev.nome) + '</h1></div>' +
     '<section class="secao"><div id="p-numeros" class="numeros"></div></section>' +
+    '<section class="secao"><h2>Fase</h2><p id="p-fase-agora" class="fase-agora"></p>' +
+      '<div class="radios" role="radiogroup" aria-label="Fase">' +
+      '<label><input type="radio" name="p-fase" value="esquenta"' + (ev.fase === 'esquenta' ? ' checked' : '') + '> Esquenta</label>' +
+      '<label><input type="radio" name="p-fase" value="festa"' + (ev.fase === 'festa' ? ' checked' : '') + '> Festa (desafios)</label></div>' +
+      '<label class="campos" style="grid-template-columns:1fr"><span class="discreto" style="margin:0">Virar para a festa automaticamente em (opcional)</span>' +
+      '<input id="p-virada" class="campo" type="datetime-local" value="' + paraCampoData(ev.festa_a_partir) + '"></label>' +
+      '<button id="p-salvar-fase" class="btn" type="button">Salvar fase</button></section>' +
+    '<section class="secao"><h2>Esquenta</h2>' +
+      '<div class="campos"><label>Fotos por pessoa<input id="p-max-fotos" class="campo" type="number" min="0" max="20" value="' + ev.max_fotos_esquenta + '"></label>' +
+      '<label>Recados por pessoa<input id="p-max-recados" class="campo" type="number" min="0" max="20" value="' + ev.max_recados + '"></label></div>' +
+      '<label for="p-temas" class="rotulo" style="margin:4px 0 0">Temas sugeridos (um por linha)</label>' +
+      '<textarea id="p-temas" class="campo" rows="5">' + esc((ev.temas ?? []).join('\n')) + '</textarea>' +
+      '<button id="p-salvar-esq" class="btn" type="button">Salvar esquenta</button></section>' +
     '<section class="secao"><h2>Evento</h2>' +
       '<label class="check"><input id="p-aberto" type="checkbox"' + (ev.aberto ? ' checked' : '') + '> Envios abertos</label>' +
       '<div class="campos"><label>Desafios por pessoa<input id="p-max" class="campo" type="number" min="1" max="30" value="' + ev.max_desafios + '"></label>' +
@@ -111,9 +124,15 @@ async function carregar() {
     '<section class="secao"><h2>Moderação · mais novas primeiro</h2><div id="p-mod" style="display:flex;flex-direction:column;gap:12px"></div></section>' +
     '<section class="secao"><h2>Noivos e moderadores</h2><ul id="p-admins" class="admins"></ul>' +
       '<form id="p-novo-admin" class="inline-form"><label for="p-admin-email" class="arquivo">E-mail do moderador</label><input id="p-admin-email" class="campo" type="email" placeholder="e-mail do moderador" autocomplete="off"><button class="btn" type="submit">Incluir</button></form></section>' +
-    '<section class="secao"><h2>Depois da festa</h2><button id="p-zip" class="btn" type="button">' + ICONES.baixar + 'Baixar todas as fotos (.zip)</button>' +
-      '<p class="nota" style="margin:0">Melhor no computador: são todas as fotos em tamanho cheio. As ocultas vão numa pasta separada.</p></section>' +
-    '<div class="linha-flex"><a class="btn btn-2" href="#/telao">Abrir o telão</a><button id="p-sair2" class="btn-texto" type="button">Sair</button></div>';
+    '<section class="secao"><h2>Depois da festa</h2><button id="p-zip" class="btn" type="button">' + ICONES.baixar + 'Baixar fotos e recados (.zip)</button>' +
+      '<p class="nota" style="margin:0">Melhor no computador: são todas as fotos em tamanho cheio. O esquenta e as ocultas vão em pastas separadas; os recados, num arquivo de texto.</p></section>' +
+    '<section class="secao"><h2>Telão</h2><label for="p-telao" class="discreto" style="margin:0">O que o telão mostra</label>' +
+      '<select id="p-telao" class="campo">' +
+      '<option value="ambos"' + (ev.telao === 'ambos' ? ' selected' : '') + '>Esquenta e desafios</option>' +
+      '<option value="esquenta"' + (ev.telao === 'esquenta' ? ' selected' : '') + '>Só o esquenta</option>' +
+      '<option value="festa"' + (ev.telao === 'festa' ? ' selected' : '') + '>Só os desafios</option></select>' +
+      '<a class="btn btn-2" href="#/telao">Abrir o telão</a></section>' +
+    '<div class="linha-flex"><span></span><button id="p-sair2" class="btn-texto" type="button">Sair</button></div>';
 
   qrDoEvento(ev.codigo, 900).then((url) => {
     $<HTMLImageElement>('p-qr').src = url;
@@ -132,6 +151,31 @@ async function carregar() {
       try { await salvarEvento(ev!.id, campos); ev = { ...ev!, ...campos }; toast('Salvo'); } catch (e) { toast(mensagemErro(e), 'erro'); }
     }, 'Salvando…'),
   );
+  mostrarFaseAgora();
+  $('p-salvar-fase').addEventListener('click', () =>
+    ocupado($<HTMLButtonElement>('p-salvar-fase'), async () => {
+      const fase = (document.querySelector<HTMLInputElement>('input[name="p-fase"]:checked')?.value ?? 'esquenta') as 'esquenta' | 'festa';
+      const v = $<HTMLInputElement>('p-virada').value;
+      const festa_a_partir = v ? new Date(v).toISOString() : null;
+      try { await salvarEvento(ev!.id, { fase, festa_a_partir }); ev = { ...ev!, fase, festa_a_partir }; await mostrarFaseAgora(); toast('Fase salva'); }
+      catch (e) { toast(mensagemErro(e), 'erro'); }
+    }, 'Salvando…'),
+  );
+  $('p-salvar-esq').addEventListener('click', () =>
+    ocupado($<HTMLButtonElement>('p-salvar-esq'), async () => {
+      const campos = {
+        max_fotos_esquenta: Math.max(0, Math.min(20, Number($<HTMLInputElement>('p-max-fotos').value) || 0)),
+        max_recados: Math.max(0, Math.min(20, Number($<HTMLInputElement>('p-max-recados').value) || 0)),
+        temas: lerLista($<HTMLTextAreaElement>('p-temas').value).map((t) => t.slice(0, 80)).slice(0, 20),
+      };
+      try { await salvarEvento(ev!.id, campos); ev = { ...ev!, ...campos }; $<HTMLTextAreaElement>('p-temas').value = campos.temas.join('\n'); toast('Esquenta salvo'); }
+      catch (e) { toast(mensagemErro(e), 'erro'); }
+    }, 'Salvando…'),
+  );
+  $('p-telao').addEventListener('change', async () => {
+    const telao = $<HTMLSelectElement>('p-telao').value as 'ambos' | 'esquenta' | 'festa';
+    try { await salvarEvento(ev!.id, { telao }); ev = { ...ev!, telao }; toast('Telão atualizado'); } catch (e) { toast(mensagemErro(e), 'erro'); }
+  });
   $('p-incluir').addEventListener('click', () =>
     ocupado($<HTMLButtonElement>('p-incluir'), async () => {
       const novos = lerLista($<HTMLTextAreaElement>('p-novos').value);
@@ -190,20 +234,21 @@ async function carregar() {
 async function renderNumeros() {
   let convidados = 0;
   try { convidados = await contarConvidados(); } catch { /* mostra 0 */ }
-  const visiveis = fotos.filter((f) => !f.oculta).length;
+  const visiveis = fotos.filter((f) => !f.oculta && f.caminho).length;
+  const recados = fotos.filter((f) => !f.oculta && !f.caminho).length;
   const el = document.getElementById('p-numeros');
   if (!el) return;
   el.innerHTML =
     '<div class="numero"><b>' + convidados + '</b><span>convidados</span></div>' +
     '<div class="numero"><b>' + visiveis + '</b><span>fotos no mural</span></div>' +
-    '<div class="numero"><b>' + lista.filter((d) => d.ativo).length + '</b><span>desafios ligados</span></div>';
+    '<div class="numero"><b>' + recados + '</b><span>recados</span></div>';
 }
 
 function renderDesafios() {
   const el = document.getElementById('p-desafios');
   if (!el) return;
   const porDesafio = new Map<string, number>();
-  for (const f of fotos) if (!f.oculta) porDesafio.set(f.desafio_id, (porDesafio.get(f.desafio_id) ?? 0) + 1);
+  for (const f of fotos) if (!f.oculta && f.desafio_id) porDesafio.set(f.desafio_id, (porDesafio.get(f.desafio_id) ?? 0) + 1);
   el.innerHTML = lista
     .map((d) => {
       const n = porDesafio.get(d.id) ?? 0;
@@ -220,11 +265,14 @@ function renderModeracao() {
   el.innerHTML = recentes.length
     ? recentes
         .map((f) =>
-          '<div class="mod' + (f.oculta ? ' oculta' : '') + '"><img crossorigin="anonymous" loading="lazy" alt="" src="' + esc(urlPublica(f.miniatura)) + '">' +
-          '<div><p>' + esc(f.desafio_texto) + '</p><p class="quem">' + esc(f.nome) + (f.oculta ? ' · oculta' : '') + '</p></div>' +
+          '<div class="mod' + (f.oculta ? ' oculta' : '') + '">' +
+          (f.miniatura ? '<img crossorigin="anonymous" loading="lazy" alt="" src="' + esc(urlPublica(f.miniatura)) + '">' : '<div class="recado-mini" aria-hidden="true">“</div>') +
+          '<div><p>' + (f.tipo === 'esquenta' ? '<span class="etiqueta">Esquenta</span> ' : '') + esc(f.legenda && !f.caminho ? f.legenda : tituloPost(f)) + '</p>' +
+          (f.legenda && f.caminho ? '<p class="quem">' + esc(f.legenda) + '</p>' : '') +
+          '<p class="quem">' + esc(f.nome) + (f.oculta ? ' · oculta' : '') + '</p></div>' +
           '<button type="button" data-id="' + esc(f.id) + '">' + (f.oculta ? 'Mostrar' : 'Ocultar') + '</button></div>')
         .join('')
-    : '<p class="discreto" style="margin:0">Nenhuma foto ainda.</p>';
+    : '<p class="discreto" style="margin:0">Nada no mural ainda.</p>';
 }
 
 async function renderAdmins() {
@@ -240,21 +288,29 @@ async function renderAdmins() {
 async function baixarZip(btn: HTMLButtonElement) {
   await ocupado(btn, async () => {
     try {
-      const todas = await todasFotos();
-      if (!todas.length) return toast('Nenhuma foto ainda.', 'erro');
+      const tudo = await todasFotos();
+      const todas = tudo.filter((f) => f.caminho);
+      const textos = tudo.filter((f) => f.legenda);
+      if (!todas.length && !textos.length) return toast('Nada no mural ainda.', 'erro');
       const arquivos: Record<string, [Uint8Array, { level: 0 }]> = {};
       let feitas = 0;
       const fila = todas.map((f, i) => ({ f, i }));
       const trabalhar = async () => {
         for (let item = fila.shift(); item; item = fila.shift()) {
-          const r = await fetch(urlPublica(item.f.caminho));
+          const r = await fetch(urlPublica(item.f.caminho!));
           if (!r.ok) continue;
-          const nome = (item.f.oculta ? 'ocultas/' : '') + nomeArquivo(item.i + 1, item.f.desafio_texto, item.f.nome);
+          const pasta = (item.f.oculta ? 'ocultas/' : '') + (item.f.tipo === 'esquenta' ? 'esquenta/' : '');
+          const nome = pasta + nomeArquivo(item.i + 1, tituloPost(item.f), item.f.nome);
           arquivos[nome] = [new Uint8Array(await r.arrayBuffer()), { level: 0 }];
           btn.textContent = 'Baixando ' + ++feitas + ' de ' + todas.length + '…';
         }
       };
       await Promise.all([trabalhar(), trabalhar(), trabalhar(), trabalhar()]);
+      // recados e legendas num arquivo de texto, na ordem em que chegaram
+      if (textos.length) {
+        const linhas = textos.map((f) => '[' + new Date(f.criado_em).toLocaleString('pt-BR') + '] ' + f.nome + (f.tema ? ' · ' + f.tema : '') + (f.oculta ? ' (oculto)' : '') + '\n' + f.legenda + '\n');
+        arquivos['recados.txt'] = [new TextEncoder().encode(linhas.join('\n')), { level: 0 }];
+      }
       const { zipSync } = await import('fflate');
       const zip = zipSync(arquivos);
       const url = URL.createObjectURL(new Blob([zip as BlobPart], { type: 'application/zip' }));
@@ -265,9 +321,27 @@ async function baixarZip(btn: HTMLButtonElement) {
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      toast(feitas + ' fotos no .zip');
+      toast(feitas + ' fotos' + (textos.length ? ' e os recados' : '') + ' no .zip');
     } catch (e) {
       toast(mensagemErro(e), 'erro');
     }
   }, 'Preparando…');
+}
+
+/** timestamptz → valor de <input type="datetime-local"> no horário do aparelho */
+function paraCampoData(iso: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+async function mostrarFaseAgora() {
+  const el = document.getElementById('p-fase-agora');
+  if (!el || !ev) return;
+  let agora = ev.fase;
+  try { agora = (await faseAtual()) ?? ev.fase; } catch { /* usa a salva */ }
+  const virada = ev.festa_a_partir ? new Date(ev.festa_a_partir).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  el.textContent = 'Agora: ' + (agora === 'festa' ? 'Festa, com os desafios' : 'Esquenta') +
+    (agora === 'esquenta' && virada ? '. Vira para a festa em ' + virada + '.' : '.');
 }

@@ -1,9 +1,9 @@
 // Navegação por endereço (#/desafio, #/mural, #/e/<código>): o voltar do celular funciona e o QR abre direto.
-export type ViewId = 'inicio' | 'entrada' | 'desafio' | 'envio' | 'cumprido' | 'mural' | 'painel' | 'telao';
+export type ViewId = 'inicio' | 'entrada' | 'esquenta' | 'desafio' | 'envio' | 'cumprido' | 'mural' | 'painel' | 'telao';
 export interface Route { view: ViewId; sub: string | null }
 
-const VIEWS: ViewId[] = ['inicio', 'entrada', 'desafio', 'envio', 'cumprido', 'mural', 'painel', 'telao'];
-const COM_ABAS: ViewId[] = ['desafio', 'mural'];
+const VIEWS: ViewId[] = ['inicio', 'entrada', 'esquenta', 'desafio', 'envio', 'cumprido', 'mural', 'painel', 'telao'];
+const COM_ABAS: ViewId[] = ['esquenta', 'desafio', 'mural'];
 
 export function parse(hash = location.hash): Route {
   const [v, sub] = hash.replace(/^#\/?/, '').split('/');

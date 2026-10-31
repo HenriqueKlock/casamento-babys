@@ -1,10 +1,14 @@
 import Dexie, { type Table } from 'dexie';
-import { cumprir, enviarArquivo } from './api';
+import { compartilhar, cumprir, enviarArquivo } from './api';
 import { caminhos, erroDeRede } from './regras';
 
 // Fila de fotos no aparelho: a foto é guardada antes de subir e só sai daqui depois que o banco confirma.
 export interface Pendente {
+  /** id do sorteio (desafio) ou do post (esquenta): é também o nome do arquivo */
   sorteio: string;
+  tipo?: 'desafio' | 'esquenta';
+  tema?: string | null;
+  legenda?: string | null;
   evento: string;
   uid: string;
   desafio: string;
@@ -30,7 +34,7 @@ export function aoMudarFila(fn: Ouvinte) {
   return () => ouvintes.delete(fn);
 }
 async function avisar() {
-  const n = await db.fila.count();
+  const n = await totalNaFila();
   ouvintes.forEach((fn) => fn(n));
 }
 
@@ -39,7 +43,8 @@ export async function enfileirar(p: Omit<Pendente, 'criado'>) {
   await avisar();
 }
 export const pendente = (sorteio: string) => db.fila.get(sorteio);
-export const totalNaFila = () => db.fila.count();
+/** Só o que ainda pode entrar (itens recusados pelo banco ficam guardados, mas não contam nem travam a tela). */
+export const totalNaFila = () => db.fila.filter((p) => !p.erro).count();
 
 let rodando: Promise<number> | null = null;
 /** Envia o que estiver na fila. Devolve quantas fotos entraram no mural. */
@@ -50,11 +55,13 @@ export function descarregar(): Promise<number> {
 async function rodar(): Promise<number> {
   let enviadas = 0;
   for (const p of await db.fila.orderBy('criado').toArray()) {
+    if (p.erro) continue;
     const c = caminhos(p.evento, p.uid, p.sorteio);
     try {
       await enviarArquivo(c.mini, p.mini);
       await enviarArquivo(c.foto, p.foto);
-      await cumprir(p.sorteio, c.foto, c.mini);
+      if (p.tipo === 'esquenta') await compartilhar(p.sorteio, c.foto, c.mini, p.tema ?? null, p.legenda ?? null);
+      else await cumprir(p.sorteio, c.foto, c.mini);
       await db.fila.delete(p.sorteio);
       enviadas++;
     } catch (e) {
@@ -70,7 +77,7 @@ async function rodar(): Promise<number> {
 /** Tenta de novo ao voltar a internet, ao abrir o app e a cada 20 s enquanto houver fila. */
 export function iniciarFila(aoEnviar: (n: number) => void) {
   const tentar = async () => {
-    if (!navigator.onLine || (await db.fila.count()) === 0) return;
+    if (!navigator.onLine || (await totalNaFila()) === 0) return;
     const n = await descarregar();
     if (n) aoEnviar(n);
   };

@@ -6,18 +6,26 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
 });
 
 export interface Sorteio { id: string; desafio_id: string; texto: string }
+export type Fase = 'esquenta' | 'festa';
 export interface Estado {
-  nome: string; evento_id: string; evento: string; aberto: boolean;
+  nome: string; evento_id: string; evento: string; data: string; aberto: boolean; fase: Fase;
   sorteio: Sorteio | null; feitos: number; max_desafios: number; trocas_restantes: number;
+  temas: string[]; fotos_esquenta: number; max_fotos_esquenta: number; recados: number; max_recados: number;
 }
 export interface Foto {
-  id: string; evento_id: string; sorteio_id: string; convidado_id: string; desafio_id: string;
-  nome: string; desafio_texto: string; caminho: string; miniatura: string; oculta: boolean; criado_em: string;
+  id: string; evento_id: string; tipo: 'desafio' | 'esquenta';
+  sorteio_id: string | null; convidado_id: string; desafio_id: string | null;
+  nome: string; desafio_texto: string | null; tema: string | null; legenda: string | null;
+  caminho: string | null; miniatura: string | null; oculta: boolean; criado_em: string;
 }
-export interface Evento { id: string; codigo: string; nome: string; data: string; aberto: boolean; max_trocas: number; max_desafios: number }
+export interface Evento {
+  id: string; codigo: string; nome: string; data: string; aberto: boolean; max_trocas: number; max_desafios: number;
+  fase: Fase; festa_a_partir: string | null; max_fotos_esquenta: number; max_recados: number; temas: string[];
+  telao: 'ambos' | 'esquenta' | 'festa';
+}
 export interface Desafio { id: string; texto: string; ativo: boolean; ordem: number }
 
-const FOTO_COLS = 'id,evento_id,sorteio_id,convidado_id,desafio_id,nome,desafio_texto,caminho,miniatura,oculta,criado_em';
+const FOTO_COLS = 'id,evento_id,tipo,sorteio_id,convidado_id,desafio_id,nome,desafio_texto,tema,legenda,caminho,miniatura,oculta,criado_em';
 
 function ok<T>(r: { data: T; error: unknown }): T {
   if (r.error) throw r.error;
@@ -64,12 +72,24 @@ export async function enviarArquivo(caminho: string, blob: Blob) {
 export async function cumprir(sorteio: string, foto: string, mini: string): Promise<string> {
   return ok(await supabase.rpc('cumprir', { p_sorteio: sorteio, p_caminho: foto, p_miniatura: mini })) as string;
 }
+/** Esquenta: foto e/ou recado. O id vem do celular (nome do arquivo), para a fila reenviar sem duplicar. */
+export async function compartilhar(id: string, foto: string | null, mini: string | null, tema: string | null, legenda: string | null): Promise<string> {
+  return ok(await supabase.rpc('compartilhar', { p_id: id, p_caminho: foto, p_miniatura: mini, p_tema: tema, p_legenda: legenda })) as string;
+}
+/** Fase pelo código do QR, antes do login (só a fase; código inventado devolve nulo). */
+export async function faseDoEvento(codigo: string): Promise<Fase | null> {
+  return ok(await supabase.rpc('fase_do_evento', { p_codigo: codigo })) as Fase | null;
+}
+export async function faseAtual(): Promise<Fase | null> {
+  return ok(await supabase.rpc('fase_atual')) as Fase | null;
+}
 
 /* ---------- mural ---------- */
 export const urlPublica = (caminho: string) => supabase.storage.from('fotos').getPublicUrl(caminho).data.publicUrl;
 
-export async function mural(opts: { antes?: string; soMinhas?: boolean; limite?: number; incluirOcultas?: boolean }): Promise<Foto[]> {
+export async function mural(opts: { antes?: string; soMinhas?: boolean; limite?: number; incluirOcultas?: boolean; tipo?: Foto['tipo'] }): Promise<Foto[]> {
   let q = supabase.from('fotos').select(FOTO_COLS).order('criado_em', { ascending: false }).limit(opts.limite ?? 30);
+  if (opts.tipo) q = q.eq('tipo', opts.tipo);
   if (opts.antes) q = q.lt('criado_em', opts.antes);
   if (!opts.incluirOcultas) q = q.eq('oculta', false);
   if (opts.soMinhas) {
@@ -104,9 +124,9 @@ export async function souAdmin(): Promise<boolean> {
   return (ok(await supabase.rpc('sou_admin')) as boolean) === true;
 }
 export async function evento(): Promise<Evento> {
-  return ok(await supabase.from('eventos').select('id,codigo,nome,data,aberto,max_trocas,max_desafios').order('criado_em').limit(1).single()) as Evento;
+  return ok(await supabase.from('eventos').select('id,codigo,nome,data,aberto,max_trocas,max_desafios,fase,festa_a_partir,max_fotos_esquenta,max_recados,temas,telao').order('criado_em').limit(1).single()) as Evento;
 }
-export async function salvarEvento(id: string, campos: Partial<Pick<Evento, 'aberto' | 'max_trocas' | 'max_desafios'>>) {
+export async function salvarEvento(id: string, campos: Partial<Omit<Evento, 'id' | 'codigo' | 'nome' | 'data'>>) {
   ok(await supabase.from('eventos').update(campos).eq('id', id));
 }
 export async function desafios(eventoId: string): Promise<Desafio[]> {

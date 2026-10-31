@@ -1,6 +1,6 @@
 # Casamento Babys · Desafios
 
-O convidado lê o QR da mesa, digita o nome e recebe um desafio sorteado. Ele cumpre, tira a foto e ela entra no mural e no telão. Depois da festa, os noivos baixam tudo num .zip.
+Duas fases. No **Esquenta**, até o dia, o convidado entra pelo link, compartilha fotos e recados (com temas sugeridos) e tudo vai para o mural. Na **Festa**, ele lê o QR da mesa, digita o nome e recebe um desafio sorteado. Ele cumpre, tira a foto e ela entra no mural e no telão. Depois da festa, os noivos baixam tudo num .zip.
 
 - App: https://henriqueklock.github.io/casamento-babys/ (o convidado entra só pelo link do QR, que leva o código do evento).
 - Plano e telas: documento "Casamento Babys — app de desafios" e o canvas "Casamento Babys — mockup".
@@ -22,7 +22,11 @@ O convidado lê o QR da mesa, digita o nome e recebe um desafio sorteado. Ele cu
     - `sortear()`: um desafio aberto por vez. Escolhe, entre os ligados que a pessoa ainda não teve, o que menos gente está fazendo ou fez, com desempate aleatório.
     - `trocar(sorteio)`: até `max_trocas` por pessoa.
     - `cumprir(sorteio, foto, miniatura)`: confere que o sorteio é da pessoa, que os caminhos são `<evento>/<uid>/<sorteio>.jpg` e `-mini.jpg` e que os dois arquivos existem. Reenviar devolve a mesma foto, para a fila poder repetir sem duplicar.
-    - `estado()`: o desafio aberto, quantos já cumpriu e as trocas que restam.
+    - `estado()`: a fase, o desafio aberto, quantos já cumpriu, as trocas que restam e o que ainda pode mandar no esquenta.
+    - `compartilhar(id, foto, miniatura, tema, legenda)`: só no esquenta. Foto (até `max_fotos_esquenta`, padrão 3) ou recado sem foto (até `max_recados`, padrão 3); o tema precisa estar na lista do evento. O id vem do celular, para a fila reenviar sem duplicar.
+    - `fase_do_evento(código)`: liberada sem login, devolve só a fase, para a tela de entrada mudar o texto.
+  - Fase: `eventos.fase` (esquenta ou festa, no painel) ou virada automática em `festa_a_partir`. No esquenta, `sortear()` recusa; na festa, `compartilhar()` recusa.
+  - Telão: `eventos.telao` escolhe o que aparece (os dois, só o esquenta ou só os desafios).
   - Storage: bucket `fotos` público (caminhos com ids aleatórios, sem listagem), só JPEG até 3 MB. Cada um só envia na própria pasta e com o evento aberto.
   - Tempo real em `fotos` para o mural e o telão. O telão relê a lista a cada 60 s para tirar as que o moderador ocultou.
 - **O evento e a lista de desafios ficam só no banco**, nunca no repositório (surpresa, e o código do QR não fica público). Mudanças de lista se fazem pelo painel.

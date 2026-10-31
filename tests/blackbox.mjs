@@ -9,7 +9,8 @@ const URL_ = cfg.match(/SUPABASE_URL = '([^']+)'/)[1];
 const KEY = cfg.match(/SUPABASE_PUBLISHABLE_KEY = '([^']+)'/)[1];
 const TABLES = ['eventos', 'app_admins', 'convidados', 'desafios', 'sorteios', 'fotos'];
 const RPCS = [['entrar', { p_codigo: 'x', p_nome: 'x' }], ['estado', {}], ['sortear', {}], ['trocar', { p_sorteio: '00000000-0000-4000-8000-000000000000' }],
-  ['cumprir', { p_sorteio: '00000000-0000-4000-8000-000000000000', p_caminho: 'x', p_miniatura: 'x' }], ['sou_admin', {}], ['meu_evento', {}]];
+  ['cumprir', { p_sorteio: '00000000-0000-4000-8000-000000000000', p_caminho: 'x', p_miniatura: 'x' }], ['sou_admin', {}], ['meu_evento', {}],
+  ['compartilhar', { p_id: '00000000-0000-4000-8000-000000000000', p_caminho: null, p_miniatura: null, p_tema: null, p_legenda: 'x' }], ['fase_atual', {}]];
 const FAKE_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhYWFhYWFhYS0wMDAwLTQwMDAtODAwMC0wMDAwMDAwMDAwMGEiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImV4cCI6NDEwMjQ0NDgwMH0.assinatura-falsa';
 
 let fails = 0;
@@ -45,6 +46,10 @@ for (const [fn, args] of RPCS) {
   const r = await call(`/rest/v1/rpc/${fn}`, { method: 'POST', body: args });
   r.status >= 400 ? ok(`${fn}(): sem login bloqueada (${r.status})`) : bad(`${fn}(): respondeu sem login (${r.status})`);
 }
+
+// fase_do_evento é a única função liberada sem login: com código inventado não devolve nada
+const fase = await call('/rest/v1/rpc/fase_do_evento', { method: 'POST', body: { p_codigo: 'codigo-inventado' } });
+fase.status === 200 && fase.data === null ? ok('fase_do_evento(): código inventado não revela nada') : bad('fase_do_evento(): respondeu ' + fase.status + ' ' + JSON.stringify(fase.data));
 
 // 2) Storage: listar e enviar sem login
 const lista = await call('/storage/v1/object/list/fotos', { method: 'POST', body: { prefix: '', limit: 10 } });

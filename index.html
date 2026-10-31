@@ -26,14 +26,14 @@
       <div class="monograma" aria-hidden="true">F&amp;H</div>
       <p class="eyebrow">Casamento Babys · 21.11.2026</p>
     </div>
-    <h1 class="titulo centro-texto">Um desafio para você <em>nesta festa</em></h1>
-    <p class="texto centro-texto">Sorteamos um desafio, você cumpre e registra com uma foto. Tudo vai para o mural e, depois, para o nosso álbum.</p>
+    <h1 id="n-titulo" class="titulo centro-texto">Um desafio para você <em>nesta festa</em></h1>
+    <p id="n-texto" class="texto centro-texto">Sorteamos um desafio, você cumpre e registra com uma foto. Tudo vai para o mural e, depois, para o nosso álbum.</p>
     <form id="f-entrada" class="empurra" novalidate>
       <label for="nome" class="rotulo">Como você quer aparecer no mural?</label>
       <input id="nome" class="campo" type="text" placeholder="Seu nome" autocomplete="given-name" maxlength="40" required enterkeyhint="go">
-      <button id="b-entrar" class="btn" type="submit"><span class="ico"></span>Sortear meu desafio</button>
+      <button id="b-entrar" class="btn" type="submit">Sortear meu desafio</button>
     </form>
-    <p class="nota centro-texto">Suas fotos aparecem no mural para os convidados e para os noivos. Para tirar uma foto do mural, fale com os noivos.</p>
+    <p class="nota centro-texto">Tudo que você mandar aparece no mural para <b>todos os convidados</b> e para os noivos. Para tirar algo do mural, fale com os noivos.</p>
   </section>
 
   <section id="v-desafio" class="view tela com-abas" hidden>
@@ -57,6 +57,28 @@
     </div>
   </section>
 
+  <section id="v-esquenta" class="view tela com-abas" hidden>
+    <div class="barra">
+      <p id="q-oi" class="oi"></p>
+      <p id="q-conta" class="discreto"></p>
+    </div>
+    <h1 class="titulo-md" style="margin-top:22px">Compartilhe um <em>momento</em></h1>
+    <p class="texto" style="margin-top:8px">Até o grande dia, mande fotos e recados para os noivos.</p>
+    <div id="q-aviso" class="aviso"></div>
+    <p class="rotulo" id="q-temas-rotulo">Escolha um tema <span class="discreto-inline">(opcional)</span></p>
+    <div id="q-temas" class="temas" role="group" aria-labelledby="q-temas-rotulo"></div>
+    <label for="q-legenda" class="rotulo">Recado ou legenda <span class="discreto-inline">(opcional na foto)</span></label>
+    <textarea id="q-legenda" class="campo" rows="3" maxlength="280" placeholder="Escreva algo para os noivos…"></textarea>
+    <p id="q-cont" class="contador" aria-live="polite">0/280</p>
+    <div id="q-acoes" class="acoes">
+      <button id="q-camera" class="btn" type="button"></button>
+      <button id="q-galeria" class="btn btn-2" type="button"></button>
+      <button id="q-recado" class="btn-texto" type="button">Enviar só o recado</button>
+    </div>
+    <p id="q-limites" class="discreto centro-texto" style="margin-top:12px"></p>
+    <p class="nota centro-texto">No dia do casamento, este app vai te dar <b>desafios surpresa</b>.</p>
+  </section>
+
   <section id="v-envio" class="view tela" hidden>
     <div class="barra-voltar">
       <a href="#/desafio" class="voltar" aria-label="Voltar ao desafio"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a>
@@ -64,8 +86,9 @@
     </div>
     <img id="e-prev" class="previa" alt="Foto que você vai enviar">
     <div class="caixa">
-      <p class="eyebrow">Desafio</p>
+      <p id="e-rotulo" class="eyebrow">Desafio</p>
       <p id="e-desafio" class="caixa-texto"></p>
+      <p id="e-legenda" class="discreto" hidden></p>
     </div>
     <div id="e-offline" class="aviso aviso-alerta" role="status" hidden></div>
     <div class="cresce"></div>
@@ -75,7 +98,7 @@
 
   <section id="v-cumprido" class="view tela centro" hidden>
     <div class="selo-ok"></div>
-    <h1 class="titulo">Desafio <em>cumprido</em></h1>
+    <h1 id="c-titulo" class="titulo">Desafio <em>cumprido</em></h1>
     <p id="c-msg" class="texto"></p>
     <figure class="polaroide">
       <img id="c-img" alt="Sua foto">
@@ -89,9 +112,11 @@
 
   <section id="v-mural" class="view tela com-abas" hidden>
     <h1 class="titulo-md">Mural</h1>
-    <p class="discreto">Os desafios cumpridos pelos convidados</p>
+    <p class="discreto">Fotos, recados e desafios dos convidados</p>
     <div class="filtros" role="group" aria-label="Filtro">
       <button type="button" class="pilula" data-filtro="todas" aria-pressed="true">Todas</button>
+      <button type="button" class="pilula" data-filtro="esquenta" aria-pressed="false">Esquenta</button>
+      <button type="button" class="pilula" data-filtro="desafios" aria-pressed="false">Desafios</button>
       <button type="button" class="pilula" data-filtro="minhas" aria-pressed="false">Minhas</button>
     </div>
     <div id="m-grade" class="grade"></div>
@@ -108,13 +133,15 @@
 </main>
 
 <nav id="abas" class="abas" aria-label="Navegação" hidden>
-  <a href="#/desafio" data-aba="desafio"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2"/><circle cx="15.5" cy="15.5" r="1.2"/><circle cx="12" cy="12" r="1.2"/></svg>Meu desafio</a>
+  <a href="#/desafio" data-aba="desafio" id="aba-1"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8.5" cy="8.5" r="1.2"/><circle cx="15.5" cy="15.5" r="1.2"/><circle cx="12" cy="12" r="1.2"/></svg><span id="aba-1-txt">Meu desafio</span></a>
   <a href="#/mural" data-aba="mural"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2"/></svg>Mural</a>
 </nav>
 
 <dialog id="foto" class="foto-dialog" aria-labelledby="f-legenda">
   <img id="f-img" alt="">
+  <p id="f-recado" class="recado-grande" hidden></p>
   <p id="f-legenda" class="caixa-texto"></p>
+  <p id="f-texto" class="discreto" hidden></p>
   <p id="f-nome" class="discreto"></p>
   <div class="dialog-acoes">
     <button id="f-fechar" class="btn btn-2" type="button">Fechar</button>
