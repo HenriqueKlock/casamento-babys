@@ -80,6 +80,10 @@ export async function compartilhar(id: string, foto: string | null, mini: string
 export async function faseDoEvento(codigo: string): Promise<Fase | null> {
   return ok(await supabase.rpc('fase_do_evento', { p_codigo: codigo })) as Fase | null;
 }
+/** Fase sem código, para o endereço puro do app (só a fase). */
+export async function fasePublica(): Promise<Fase | null> {
+  return ok(await supabase.rpc('fase_publica')) as Fase | null;
+}
 export async function faseAtual(): Promise<Fase | null> {
   return ok(await supabase.rpc('fase_atual')) as Fase | null;
 }

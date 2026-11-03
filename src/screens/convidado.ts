@@ -1,4 +1,4 @@
-import { compartilhar, entrar, estado, faseDoEvento, meuId, sortear, trocar, type Estado, type Fase } from '../api';
+import { compartilhar, entrar, estado, faseDoEvento, fasePublica, meuId, sortear, trocar, type Estado, type Fase } from '../api';
 import { db, descarregar, enfileirar, pendente, totalNaFila } from '../fila';
 import { preparar } from '../imagem';
 import {
@@ -66,13 +66,21 @@ let temaEscolhido: string | null = null;
 
 export function initConvidado() {
   /* ---------- início: sem código ---------- */
+  // endereço puro do app: quem já entrou vai para a sua tela; no esquenta, abre a entrada sem código;
+  // na festa, pede o QR da mesa
   onShow('inicio', async () => {
+    const tela = $('v-inicio');
+    tela.classList.add('carregando');
     try {
       const e = await atualizar();
       if (e) return go(telaDaFase(e), true);
     } catch { /* segue para o início */ }
     const codigo = ler(CHAVE_CODIGO);
-    if (codigo) go('e/' + codigo, true);
+    if (codigo) return go('e/' + codigo, true);
+    try {
+      if ((await fasePublica()) === 'esquenta') return go('e', true);
+    } catch { /* sem rede: mostra o pedido do QR */ }
+    tela.classList.remove('carregando');
   });
 
   /* ---------- entrada pelo QR ou pelo link ---------- */
@@ -80,18 +88,22 @@ export function initConvidado() {
   let codigoAtual = '';
   let faseEntrada: Fase = 'festa';
   onShow('entrada', async (r) => {
-    if (!r.sub) return go('inicio', true);
-    codigoAtual = r.sub.toLowerCase();
-    guardar(CHAVE_CODIGO, codigoAtual);
+    const tela = $('v-entrada');
+    tela.classList.add('carregando');
+    codigoAtual = (r.sub ?? '').toLowerCase();
+    if (codigoAtual) guardar(CHAVE_CODIGO, codigoAtual);
     nome.value = ler(CHAVE_NOME) ?? '';
     try {
       const e = await atualizar();
       if (e) return go(telaDaFase(e), true);
     } catch { /* mostra o formulário */ }
     try {
-      faseEntrada = (await faseDoEvento(codigoAtual)) ?? 'festa';
+      faseEntrada = (codigoAtual ? await faseDoEvento(codigoAtual) : await fasePublica()) ?? 'festa';
     } catch { /* sem rede: texto da festa */ }
+    // sem código só se entra no esquenta
+    if (!codigoAtual && faseEntrada !== 'esquenta') return go('inicio', true);
     textoEntrada(faseEntrada);
+    tela.classList.remove('carregando');
   });
   $('f-entrada').addEventListener('submit', (ev) => {
     ev.preventDefault();

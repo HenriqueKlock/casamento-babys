@@ -51,6 +51,11 @@ for (const [fn, args] of RPCS) {
 const fase = await call('/rest/v1/rpc/fase_do_evento', { method: 'POST', body: { p_codigo: 'codigo-inventado' } });
 fase.status === 200 && fase.data === null ? ok('fase_do_evento(): código inventado não revela nada') : bad('fase_do_evento(): respondeu ' + fase.status + ' ' + JSON.stringify(fase.data));
 
+// fase_publica também é liberada sem login e só pode devolver a fase, nada do evento
+const pub = await call('/rest/v1/rpc/fase_publica', { method: 'POST', body: {} });
+pub.status === 200 && (pub.data === null || pub.data === 'esquenta' || pub.data === 'festa')
+  ? ok('fase_publica(): devolve só a fase (' + JSON.stringify(pub.data) + ')') : bad('fase_publica(): respondeu ' + pub.status + ' ' + JSON.stringify(pub.data));
+
 // 2) Storage: listar e enviar sem login
 const lista = await call('/storage/v1/object/list/fotos', { method: 'POST', body: { prefix: '', limit: 10 } });
 closed(lista) ? ok(`fotos: listagem sem login bloqueada (${lista.status})`) : bad('fotos: listagem sem login devolveu arquivos');

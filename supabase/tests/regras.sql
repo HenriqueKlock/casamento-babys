@@ -125,6 +125,9 @@ begin
   begin perform public.sortear(); raise exception 'FALHOU: sorteou no esquenta';
   exception when others then if sqlerrm <> 'fase_esquenta' then raise; end if; end;
   if (public.estado() ->> 'fase') <> 'esquenta' then raise exception 'FALHOU: estado sem a fase esquenta'; end if;
+  -- endereço sem código: no esquenta entra só com o nome
+  perform public.entrar('', 'Bia');
+  if public.fase_publica() <> 'esquenta' then raise exception 'FALHOU: fase_publica no esquenta'; end if;
   begin perform public.compartilhar(gen_random_uuid(), null, null, null, '   '); raise exception 'FALHOU: recado vazio entrou';
   exception when others then if sqlerrm <> 'recado_vazio' then raise; end if; end;
   begin perform public.compartilhar(gen_random_uuid(), null, null, 'tema inventado', 'oi'); raise exception 'FALHOU: tema inventado entrou';
@@ -165,11 +168,15 @@ begin
   execute 'set local role anon';
   if public.fase_do_evento(v_codigo) <> 'festa' then raise exception 'FALHOU: virada automática não aconteceu'; end if;
   if public.fase_do_evento('codigo-inventado') is not null then raise exception 'FALHOU: fase de código inventado'; end if;
+  if public.fase_publica() <> 'festa' then raise exception 'FALHOU: fase_publica depois da virada'; end if;
   execute 'reset role';
   execute 'set local role authenticated';
   perform set_config('request.jwt.claims', json_build_object('sub', b, 'role', 'authenticated', 'is_anonymous', true)::text, true);
   begin perform public.compartilhar(gen_random_uuid(), null, null, null, 'Depois da virada'); raise exception 'FALHOU: esquenta depois da virada';
   exception when others then if sqlerrm <> 'esquenta_encerrado' then raise; end if; end;
+  -- na festa, sem código não entra
+  begin perform public.entrar('', 'Bia'); raise exception 'FALHOU: entrou sem código na festa';
+  exception when others then if sqlerrm <> 'codigo_invalido' then raise; end if; end;
 
   -- ===== limites e evento fechado =====
   execute 'reset role';
